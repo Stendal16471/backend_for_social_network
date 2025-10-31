@@ -24,7 +24,7 @@ class PostListView(generics.ListCreateAPIView):
     Автоматически определяет геолокацию, если указано местоположение.
 
     Request Body (multipart/form-data):
-    - text: string (required) - Текст поста
+    - text: string (optional) - Текст поста
     - image: file (optional) - Основное изображение поста
     - images: array of files (optional) - Дополнительные изображения
     - location_name: string (optional) - Название местоположения для геокодинга

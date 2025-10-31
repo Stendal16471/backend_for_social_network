@@ -158,6 +158,7 @@ class PostCreateSerializer(serializers.ModelSerializer):
     Validation:
     - images: Максимум 10 изображений
     - image: Поддерживаются форматы jpg, jpeg, png
+    - text: Должен быть указан текст или изображение
     """
     images = serializers.ListField(
         child=serializers.ImageField(max_length=100000,
@@ -172,6 +173,30 @@ class PostCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Post
         fields = ['text', 'image', 'images', 'location_name']
+
+    def validate(self, data):
+        """
+        Проверяет, что пост содержит хотя бы текст или изображение.
+
+        Args:
+            data: Валидируемые данные
+
+        Returns:
+            dict: Валидированные данные
+
+        Raises:
+            serializers.ValidationError: Если пост не содержит контента
+        """
+        text = data.get('text', '')
+        image = data.get('image')
+        images = data.get('images', [])
+
+        if not text and not image and not images:
+            raise serializers.ValidationError(
+                "Пост должен содержать либо текст, либо изображение."
+            )
+
+        return data
 
     def create(self, validated_data):
         """

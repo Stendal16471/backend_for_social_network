@@ -96,7 +96,7 @@ class PostAPITestCase(TestCase):
         post = Post.objects.get(id=post_id)
 
         self.assertEqual(post.text, 'Пост с изображением')
-        self.assertIsNotNone(post.image)
+        self.assertTrue(bool(post.image))
 
     def test_create_post_unauthenticated(self):
         """Тест создания поста неавторизованным пользователем"""
@@ -266,6 +266,81 @@ class PostAPITestCase(TestCase):
         if os.path.exists(TEST_MEDIA_ROOT):
             shutil.rmtree(TEST_MEDIA_ROOT)
         super().tearDown()
+
+    def test_create_text_only_post(self):
+        """Тест создания поста только с текстом (без изображений)"""
+        self.client.force_authenticate(user=self.user1)
+
+        response = self.client.post(self.post_list_url, {
+            'text': 'Текстовый пост без изображений',
+            'location_name': 'Москва, Россия'
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Post.objects.count(), 1)
+
+        post_id = self.get_post_id_from_response(response)
+        post = Post.objects.get(id=post_id)
+
+        self.assertEqual(post.author, self.user1)
+        self.assertEqual(post.text, 'Текстовый пост без изображений')
+        self.assertFalse(bool(post.image))
+        self.assertEqual(post.images.count(), 0)
+
+    def test_create_post_with_only_image(self):
+        """Тест создания поста только с изображением (без текста)"""
+        self.client.force_authenticate(user=self.user1)
+
+        image = self.create_test_image('only_image.jpg')
+
+        response = self.client.post(self.post_list_url, {
+            'image': image,
+            'location_name': 'Сочи'
+        }, format='multipart')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        post_id = self.get_post_id_from_response(response)
+        post = Post.objects.get(id=post_id)
+
+        self.assertEqual(post.text, '')
+        self.assertTrue(bool(post.image))
+        self.assertEqual(post.images.count(), 0)
+
+    def test_create_empty_post_validation(self):
+        """Тест валидации при создании пустого поста (без текста и изображений)"""
+        self.client.force_authenticate(user=self.user1)
+
+        response = self.client.post(self.post_list_url, {
+            'text': '',
+            'location_name': 'Тестовое место'
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Пост должен содержать либо текст, либо изображение.',
+                      str(response.data))
+        self.assertEqual(Post.objects.count(), 0)
+
+    def test_create_post_with_text_and_multiple_images(self):
+        """Тест создания поста с текстом и несколькими изображениями"""
+        self.client.force_authenticate(user=self.user1)
+
+        image1 = self.create_test_image('multi1.jpg')
+        image2 = self.create_test_image('multi2.jpg')
+
+        response = self.client.post(self.post_list_url, {
+            'text': 'Пост с текстом и несколькими изображениями',
+            'images': [image1, image2],
+            'location_name': 'Красная Поляна'
+        }, format='multipart')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        post_id = self.get_post_id_from_response(response)
+        post = Post.objects.get(id=post_id)
+
+        self.assertEqual(post.text, 'Пост с текстом и несколькими изображениями')
+        self.assertEqual(post.images.count(), 2)
 
 
 class LikeTestCase(TestCase):

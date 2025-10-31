@@ -13,7 +13,7 @@ class Post(models.Model):
     Attributes:
         author (User): Автор поста (связь с пользователем)
         text (str): Текст поста, максимальная длина 2000 символов
-        image (ImageField): Основное изображение поста
+        image (ImageField): Основное изображение поста (необязательное)
         created_at (datetime): Дата и время создания поста (автоматически)
         latitude (float): Географическая широта местоположения
         longitude (float): Географическая долгота местоположения
@@ -21,6 +21,7 @@ class Post(models.Model):
 
     Methods:
         __str__: Возвращает строковое представление поста
+        has_content: Проверяет, есть ли в посте контент (текст или изображение)
 
     Meta:
         ordering: Посты сортируются от новых к старым
@@ -33,7 +34,9 @@ class Post(models.Model):
     text = models.TextField(max_length=2000, blank=True)
     image = models.ImageField(
         upload_to='posts/images/',
-        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png'])]
+        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png'])],
+        null=True,
+        blank=True
     )
     created_at = models.DateTimeField(auto_now_add=True)
     latitude = models.FloatField(null=True, blank=True)
@@ -45,6 +48,10 @@ class Post(models.Model):
 
     def __str__(self):
         return f'Post {self.id} by {self.author.username}'
+
+    def has_content(self):
+        """Проверяет, содержит ли пост какой-либо контент (текст или изображение)"""
+        return bool(self.text) or bool(self.image)
 
 
 class PostImage(models.Model):
